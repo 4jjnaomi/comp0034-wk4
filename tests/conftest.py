@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 import pytest
-from paralympics import create_app
+from paralympics import create_app, db
 
 
 @pytest.fixture(scope='module')
@@ -22,11 +22,23 @@ def app():
     }
     app = create_app(test_config=test_cfg)
 
+    # # Push an application context to bind the SQLAlchemy object to the application
+    with app.app_context():
+        db.create_all()
+
     yield app
 
-    # clean up / reset resources
+    # # Clean up / reset resources
+    with app.app_context():
+        db.session.remove()  # Close the database session
+        db.drop_all()
+
+        # Explicitly close the database connection
+        db.engine.dispose()
+
     # Delete the test database
-    os.remove(db_path)
+    os.unlink(db_path)
+    
 
 
 @pytest.fixture()
